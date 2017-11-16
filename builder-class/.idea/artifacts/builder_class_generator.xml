@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact build-on-make="true" name="builder-class-generator">
+    <output-path>$PROJECT_DIR$/out/artifacts/builder_class_generator</output-path>
+    <root id="root">
+      <element id="archive" name="builder-class-generator.jar">
+        <element id="directory" name="META-INF">
+          <element id="file-copy" path="$PROJECT_DIR$/resources/META-INF/MANIFEST.MF" />
+          <element id="file-copy" path="$PROJECT_DIR$/resources/META-INF/plugin.xml" />
+        </element>
+        <element id="module-output" name="builder-class" />
+      </element>
+    </root>
+  </artifact>
+</component>

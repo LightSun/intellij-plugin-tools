@@ -83,7 +83,7 @@ public class BuiderProcessor {
 
         //create builder
         PsiTypeParameterList oldTypeList = mPsiClass.getTypeParameterList();
-        PsiClass targetPsiClass = elementFactory.createClass("Builder");
+        final PsiClass targetPsiClass = elementFactory.createClass("Builder");
         PsiModifierList modifierList = targetPsiClass.getModifierList();
         if(modifierList != null){
             modifierList.setModifierProperty(PsiModifier.STATIC, true);
@@ -105,24 +105,6 @@ public class BuiderProcessor {
             sb.append(">");
             types = sb.toString();
         }
-        //fields
-        for(FieldInfo info : mFieldInfos){
-            styleManager.shortenClassReferences(targetPsiClass.addBefore(info.getField(), targetPsiClass.getLastChild()));
-        }
-        //methods
-        for(FieldInfo info : mFieldInfos){
-            PsiMethod method = elementFactory.createMethodFromText(
-                    generateBuilderSet(info, targetPsiClass, types), targetPsiClass);
-            styleManager.shortenClassReferences(targetPsiClass.addBefore(method, targetPsiClass.getLastChild()));
-           /*
-            //给方法加泛型
-            PsiTypeParameterList parameterList = method.getTypeParameterList();
-            if(parameterList != null && builderTypeParams != null){
-                parameterList.replace(builderTypeParams);
-            }*/
-        }
-        styleManager.shortenClassReferences(parent.addBefore(targetPsiClass, parent.getLastChild()));
-
         //====================================== create source for src PsiClass ======================================
         //create constructor for source PsiClass
         String baseConstructor = "protected "+ mPsiClass.getName() + " (" + getBuilderClassName(mPsiClass) + types + " builder)";
@@ -146,18 +128,48 @@ public class BuiderProcessor {
         styleManager.shortenClassReferences(mPsiClass.addAfter(constructor, mLastField));
         //generate get method for src PsiClass
         for(FieldInfo info : mFieldInfos){
-            PsiMethod method = elementFactory.createMethodFromText(generateGet(info), targetPsiClass);
+            PsiMethod method = elementFactory.createMethodFromText(generateGet(info), mPsiClass);
             preMethod = mPsiClass.findMethodBySignature(method, true);
             if(preMethod != null){
                 preMethod.delete();
             }
-            styleManager.shortenClassReferences(mPsiClass.addBefore(method, targetPsiClass));
+            styleManager.shortenClassReferences(mPsiClass.addBefore(method, mPsiClass.getLastChild()));
         }
-        //Util.log(targetPsiClass.getQualifiedName(), Arrays.toString(parameters));
+        //====================================== end create source for src PsiClass ======================================
+
+        //================= start create fields ,methods for builder ================
+        //fields
+        for(FieldInfo info : mFieldInfos){
+            styleManager.shortenClassReferences(targetPsiClass.addBefore(info.getField(), targetPsiClass.getLastChild()));
+        }
+        //methods
+        for(FieldInfo info : mFieldInfos){
+            PsiMethod method = elementFactory.createMethodFromText(
+                    generateBuilderSet(info, targetPsiClass, types), targetPsiClass);
+            styleManager.shortenClassReferences(targetPsiClass.addBefore(method, targetPsiClass.getLastChild()));
+           /*
+            //给方法加泛型
+            PsiTypeParameterList parameterList = method.getTypeParameterList();
+            if(parameterList != null && builderTypeParams != null){
+                parameterList.replace(builderTypeParams);
+            }*/
+        }
+        //add build()
+        PsiMethod method = elementFactory.createMethodFromText(generateBuildMethod(mPsiClass, types), targetPsiClass);
+        styleManager.shortenClassReferences(targetPsiClass.addBefore(method, targetPsiClass.getLastChild()));
+
+        styleManager.shortenClassReferences(parent.addBefore(targetPsiClass, parent.getLastChild()));
+    }
+
+    private String generateBuildMethod(PsiClass mPsiClass, String types) {
+        return String.format("public %s build(){ return new %s(this); }",
+                mPsiClass.getName() + types,
+                mPsiClass.getName() + types
+        );
     }
 
     private String generateGet(FieldInfo info) {
-        return String.format("%s %s(){ return this.%s ;}",
+        return String.format("public %s %s(){ return this.%s ;}",
                 info.getTypeTypeName(),
                 info.getGetMethodName(),
                 info.getName()
